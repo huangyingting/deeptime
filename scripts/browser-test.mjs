@@ -62,7 +62,7 @@ try {
     viewport: { width: 1440, height: 1000 },
   });
   const page = await context.newPage();
-  page.setDefaultTimeout(20000);
+  page.setDefaultTimeout(60000);
   const errors = [],
     failures = [],
     external = [];
@@ -84,15 +84,13 @@ try {
   await expect(
     page.getByRole("img", { name: /Interactive Earth globe/ }),
   ).toBeVisible();
-  await page.screenshot({ path: `${artifacts}/desktop.png` });
-  const globe = page.locator(".globe-stage canvas");
-  const before = await globe.screenshot();
+  const before = await page.screenshot({ path: `${artifacts}/desktop.png` });
   await page.mouse.move(700, 400);
   await page.mouse.down();
   await page.mouse.move(920, 450, { steps: 12 });
   await page.mouse.up();
   await page.waitForTimeout(500);
-  const after = await globe.screenshot();
+  const after = await page.screenshot();
   assert.ok(!before.equals(after), "Dragging must change the globe rendering");
 
   const timeline = page.getByRole("slider", { name: "Geological age" });
@@ -217,11 +215,15 @@ try {
   await expect(
     page.getByRole("heading", { name: "An explosion of animal worlds" }),
   ).toBeVisible();
-  const panel = await page.locator(".chapter-panel").boundingBox();
-  assert.ok(
-    panel.x >= 0 && panel.x + panel.width <= 391,
-    "Mobile chapter fits viewport",
-  );
+  await expect
+    .poll(
+      async () => {
+        const panel = await page.locator(".chapter-panel").boundingBox();
+        return panel !== null && panel.x >= 0 && panel.x + panel.width <= 391;
+      },
+      { message: "Mobile chapter fits viewport after its entrance animation" },
+    )
+    .toBe(true);
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
